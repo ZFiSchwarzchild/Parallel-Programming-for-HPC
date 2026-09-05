@@ -9,33 +9,33 @@
 #endif
 
 #ifndef __CUDACC__
-    #define TIMERSTART(lablel)                                                  \
-    std::chrono::time_point<std::chrono::system_clock> a##lable, b##lable;      \
-    a##lable = std::chrono::system_clock::now();
+    #define TIMERSTART(label)                                                   \
+    std::chrono::time_point<std::chrono::system_clock> a##label, b##label;      \
+    a##label = std::chrono::system_clock::now();
 #else
-    #define TIMERSTART(lablel)
-            cudaEvent_t start##lable, stop##lable;                              \
-            float time##lable;                                                  \
-            cudaEventCreate(&start##lable);                                     \   
-            cudaEventCreate(&stop##lable);                                      \
-            cudaEventRecord(start##lable, 0);
+    #define TIMERSTART(label)                                                   \
+            cudaEvent_t start##label, stop##label;                              \
+            float time##label;                                                  \
+            cudaEventCreate(&start##label);                                     \   
+            cudaEventCreate(&stop##label);                                      \
+            cudaEventRecord(start##label, 0);
 #endif
 
 #ifndef __CUDACC__
-    #define TIMERSTOP(lablel)                                                   \
-    b##lable = std::chrono::system_clock::now();                                \
-    std::chrono::duration<double> elapsed_seconds##lable = b##lable - a##lable; \
-    std::cout << "Elapsed time for (" << #lablel << "): "                       \
-              << elapsed_seconds##lable.count() << "s" << std::endl;
+    #define TIMERSTOP(label)                                                    \
+    b##label = std::chrono::system_clock::now();                                \
+    std::chrono::duration<double> elapsed_seconds##label = b##label - a##label; \
+    std::cout << "Elapsed time for (" << #label << "): "                        \
+              << elapsed_seconds##label.count() << "s" << std::endl;
 #else
-    #define TIMERSTOP(lablel)                                                   \
-            cudaEventRecord(stop##lable, 0);                                    \
-            cudaEventSynchronize(stop##lable);                                  \
-            cudaEventElapsedTime(&time##lable, start##lable, stop##lable);      \
-            std::cout << "Elapsed time for (" << #lablel << "): "               \
-                      << time##lable << "ms" << std::endl;                      \
-            cudaEventDestroy(start##lable);                                     \
-            cudaEventDestroy(stop##lable);
+    #define TIMERSTOP(label)                                                    \
+            cudaEventRecord(stop##label, 0);                                    \
+            cudaEventSynchronize(stop##label);                                  \
+            cudaEventElapsedTime(&time##label, start##label, stop##label);      \
+            std::cout << "Elapsed time for (" << #label << "): "                \
+                      << time##label << "ms" << std::endl;                      \
+            cudaEventDestroy(start##label);                                     \
+            cudaEventDestroy(stop##label);
 #endif
 
 #ifdef __CUDACC__

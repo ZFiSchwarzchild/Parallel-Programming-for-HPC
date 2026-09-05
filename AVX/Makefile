@@ -1,6 +1,6 @@
 CXX = g++
 CC = g++          # 强制使用g++作为链接器
-CXXFLAGS = -std=c++17 -O3 -mavx -msse3 -Wall -Wextra -Iinclude
+CXXFLAGS = -std=c++17 -O3 -mavx -mfma -msse3 -Wall -Wextra -Iinclude  #添加 -mfma
 LDFLAGS = -lstdc++   # 显式链接C++标准库
 DEPFLAGS = -MMD -MP
 

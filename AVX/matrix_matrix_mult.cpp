@@ -31,16 +31,84 @@ inline float hsum_avx(__m256 v){
     return hsum_sse3(v_lo);                           // 调用hsum_sse3对v_lo进行水平求和
 }
 
+void plain_dmm(float* A,
+               float* B,
+               float* C,
+               uint64_t M,
+               uint64_t L,
+               uint64_t N,
+               bool parallel){
+
+    #pragma omp parallel for collapse(2) if(parallel)
+    for(uint64_t i = 0; i < M ; i++){
+        for(uint64_t j = 0; j < N ; j++){
+            float sum = 0.0f;
+            for(uint64_t k = 0; k < L ; k++){
+                sum += A[i*L+k] * B[j*L+k];         // 注意B的访问方式，假设B是按列主序存储的                
+            }    
+            C[i*N+j] = sum;     
+        }
+    }
+}
+
+void avx_dmm(float* A,
+             float* B,
+             float* C,
+             uint64_t M,
+             uint64_t L,
+             uint64_t N,
+             bool parallel){
+
+    #pragma omp parallel for collapse(2) if(parallel) 
+    for(uint64_t i = 0; i < M ; i++){
+        for(uint64_t j = 0; j < N ; j++){
+            __m256 sum_vec = _mm256_setzero_ps();                   // 初始化一个256位的向量为零
+            for(uint64_t k = 0; k < L ; k+=8){
+                __m256 a_vec = _mm256_loadu_ps(&A[i*L+k]);          // 加载A的8个元素到向量
+                __m256 b_vec = _mm256_loadu_ps(&B[j*L+k]);          // 加载B的8个元素到向量
+                sum_vec = _mm256_fmadd_ps(a_vec, b_vec, sum_vec);   // 执行FMA操作: sum_vec += a_vec * b_vec
+            }
+            C[i*N+j] = hsum_avx(sum_vec);                           // 对sum_vec进行水平求和并存储到C中
+        }
+    }
+}
+
+void avx_dmm_unroll_2(float* A,
+                      float* B,
+                      float* C,
+                      uint64_t M,
+                      uint64_t L,
+                      uint64_t N,
+                      bool parallel){
+
+    #pragma omp parallel for collapse(2) if(parallel)
+    for(uint64_t i =0;i<M;i++){
+        for(uint64_t j=0;j<N;j++){
+
+            __m256 X = _mm256_setzero_ps();
+            __m256 Y = _mm256_setzero_ps();
+            for(uint64_t k=0;k<L;k+=16){
+                const __m256 AVX = _mm256_load_ps(A+i*L+k+0);
+                const __m256 BVX = _mm256_load_ps(B+j*L+k+0);
+                const __m256 AVY = _mm256_load_ps(A+i*L+k+8);
+                const __m256 BVY = _mm256_load_ps(B+j*L+k+8);
+                X = _mm256_add_ps(X,_mm256_mul_ps(AVX,BVX));
+                Y = _mm256_add_ps(Y,_mm256_mul_ps(AVY,BVY));
+            }
+            C[i*N+j] = hsum_avx(X)+hsum_avx(Y);
+        }
+    }
+ }
 
 
 // ============================================
 // 辅助函数
 // ============================================
 // 打印__m256的内容
-void print_m256(const char* lable,__m256 v){
+void print_m256(const char* label,__m256 v){
     float temp[8];
     _mm256_storeu_ps(temp,v); // 将__m256类型的向量存储到float数组中
-    std::cout <<lable<<":[";
+    std::cout <<label<<":[";
     for(int i =0;i<8;i++){
         std::cout<<std::setw(8)<<std::fixed<<std::setprecision(4)<<temp[i];
         if(i<7) std::cout<<", ";
@@ -86,16 +154,51 @@ bool test_basic_functionality(){
 }
 
 
+void test_matrix_matrix_mult(){
+    std::cout << "\n======= 测试: 矩阵相乘功能测试 =======" << std::endl;
+    std::cout << "Running test_matrix_matrix_mult..." << std::endl;
+    // matrix shapes
+    const uint64_t M = 1UL << 10;
+    const uint64_t L = 1UL << 11;
+    const uint64_t N = 1UL << 12;
 
+    TIMERSTART(alloc_memory)
+    auto A = static_cast<float*>(_mm_malloc(M*L*sizeof(float),32));
+    auto B = static_cast<float*>(_mm_malloc(N*L*sizeof(float),32));
+    auto C = static_cast<float*>(_mm_malloc(M*N*sizeof(float),32));
+    TIMERSTOP(alloc_memory)
 
+    TIMERSTART(init)
+    init(A,M*L);
+    init(B,N*L);
+    TIMERSTOP(init)
 
+    TIMERSTART(plain_dmm_single)
+    plain_dmm(A,B,C,M,L,N,false);
+    TIMERSTOP(plain_dmm_single)
 
+    TIMERSTART(avx_dmm_single)
+    avx_dmm(A,B,C,M,L,N,false);
+    TIMERSTOP(avx_dmm_single)
 
+    TIMERSTART(avx_dmm_multi)
+    avx_dmm(A,B,C,M,L,N,true);
+    TIMERSTOP(avx_dmm_multi)
 
+    TIMERSTART(avx_dmm_unroll_2_single)
+    avx_dmm_unroll_2(A,B,C,M,L,N,false);
+    TIMERSTOP(avx_dmm_unroll_2_single)
 
+    TIMERSTART(avx_dmm_unroll_2_multi)
+    avx_dmm_unroll_2(A,B,C,M,L,N,true);
+    TIMERSTOP(avx_dmm_unroll_2_multi)
 
-
-
+    TIMERSTART(free_memory)
+    _mm_free(A);
+    _mm_free(B);
+    _mm_free(C);
+    TIMERSTOP(free_memory)
+}
 
 int test_hsum_sse3(){
     __m128 v = _mm_set_ps(1.0f, 2.0f, 3.0f, 4.0f); // v = [4.0, 3.0, 2.0, 1.0]
@@ -108,5 +211,6 @@ int test_hsum_sse3(){
 int main(){
     test_hsum_sse3();
     test_basic_functionality();
+    test_matrix_matrix_mult();
     return 0;
 }
