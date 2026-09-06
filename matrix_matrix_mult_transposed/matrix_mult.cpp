@@ -6,9 +6,9 @@
 int main(){
 
     // matrix shapes 
-    const uint64_t m = 1 << 15;
-    const uint64_t n = 1 << 15;
-    const uint64_t l = 1 << 5;
+    const uint64_t m = 1 << 13;
+    const uint64_t n = 1 << 13;
+    const uint64_t l = 1 << 13;
 
     TIMERSTART(init)
     std::vector<float> A(m*l,0);
@@ -22,9 +22,9 @@ int main(){
         for(uint64_t j = 0; j < n; j++){
             float sum = float(0);
             for (uint64_t k = 0; k < l; k++){
-                sum += A[i*l+k] * B[j*l + k];
+                sum += A[i*l+k] * B[k*n + j];
             }
-            C[i*l+j]=sum;
+            C[i*n+j]=sum;
         }
     }
     TIMERSTOP(simple_mult)
@@ -41,9 +41,9 @@ int main(){
         for (uint64_t j = 0; j < n; j++){
             float sum = float(0);
             for(uint64_t k = 0; k < l; k++){
-                sum += A[i*m+k]*Bt[j*n+k];
+                sum += A[i*l+k]*Bt[j*l+k];
             }
-            C[i*m+j]=sum;
+            C[i*n+j]=sum;
         }
     }
     TIMERSTOP(transpose_and_mult)
