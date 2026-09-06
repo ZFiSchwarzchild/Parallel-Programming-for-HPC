@@ -16,7 +16,7 @@
     #define TIMERSTART(label)                                                   \
             cudaEvent_t start##label, stop##label;                              \
             float time##label;                                                  \
-            cudaEventCreate(&start##label);                                     \   
+            cudaEventCreate(&start##label);                                     \
             cudaEventCreate(&stop##label);                                      \
             cudaEventRecord(start##label, 0);
 #endif
