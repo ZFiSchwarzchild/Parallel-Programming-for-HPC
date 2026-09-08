@@ -1,14 +1,16 @@
 #include <iostream>
 #include <cstdint>
 #include <vector>
+#include <immintrin.h>
 #include "../include/hpc_helpers.hpp"
+
 
 int main(){
 
     // matrix shapes 
     const uint64_t m = 1 << 13;
     const uint64_t n = 1 << 13;
-    const uint64_t l = 1 << 13;
+    const uint64_t l = 1 << 11;
 
     TIMERSTART(init)
     std::vector<float> A(m*l,0);
@@ -31,9 +33,9 @@ int main(){
 
     TIMERSTART(transpose_and_mult)
     TIMERSTART(transpose_matrix)
-    for(uint64_t j = 0; j < n; j++){
-        for(uint64_t k = 0; k < l; k++){
-            Bt[j*l+k] = B[k*n+j];
+    for(uint64_t k = 0; k < l; k++){
+        for(uint64_t j = 0; j < n; j++){
+            Bt[j*l+k] = B[k*n+j];       //写入通常比读取开销小,因此选择让写入不连续，而让读取数据连续
         }
     }
     TIMERSTOP(transpose_matrix)
