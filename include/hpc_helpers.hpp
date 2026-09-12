@@ -70,9 +70,9 @@ private:
 public:
     static_assert(std::is_fundamental<T>::value &&
                   std::is_arithmetic<T>::value,
-                  "warpped type must be a fundamental, numeric type");
+                  "warpped type must be a fundamental, numeric type");  //限制 T 必须是基本算术类型。
     // do noting
-    constexpr no_init_t() noexcept{}
+    constexpr no_init_t() noexcept{}    // 什么都不做的构造函数
 
     // convertible from a T
     constexpr no_init_t(T value) noexcept : v_(value) {}
