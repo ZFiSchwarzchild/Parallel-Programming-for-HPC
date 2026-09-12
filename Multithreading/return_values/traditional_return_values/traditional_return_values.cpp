@@ -21,7 +21,7 @@ void fibo(value_t n,
 int main(int argc,char* argv[]){
     const uint64_t num_threads = 32;
     std::vector<std::thread> threads;
-    std::vector<uint64_t> results(num_threads);
+    std::vector<uint64_t> results(num_threads,0);
     for(uint64_t id=0;id<num_threads;id++){
         threads.emplace_back(fibo<uint64_t,uint64_t>,id,&(results[id]));
     }
