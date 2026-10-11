@@ -4,6 +4,12 @@ CXXFLAGS = -std=c++17 -O3 -mavx -mfma -msse3 -Wall -Wextra -Iinclude  #添加 -m
 LDFLAGS = -lstdc++   # 显式链接C++标准库
 DEPFLAGS = -MMD -MP
 
+OPENMP ?= 1
+ifeq ($(OPENMP),1)	
+CXXFLAGS += -fopenmp
+$(info OpenMP support enabled)
+endif
+
 # 目录设置
 BUILD_DIR = build
 SRC_DIR = .
