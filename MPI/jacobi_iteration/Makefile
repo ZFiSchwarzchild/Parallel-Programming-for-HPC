@@ -1,8 +1,11 @@
-CXX = g++
+CXX = mpicxx
 CC = g++          # 强制使用g++作为链接器
 CXXFLAGS = -std=c++17 -O3 -pthread -Wl,--no-as-needed -mavx -mfma -msse3 -Wall -Wextra -Iinclude  #添加 -mfma
 LDFLAGS = -lstdc++   # 显式链接C++标准库
 DEPFLAGS = -MMD -MP
+
+# 告诉 OpenMPI 的 mpicxx 包装器用系统 g++ 作为底层编译器
+export OMPI_CXX = g++
 
 OPENMP ?= 1
 ifeq ($(OPENMP),1)	
