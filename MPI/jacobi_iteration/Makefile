@@ -85,3 +85,6 @@ help:
 	@echo "当前可编译的程序: $(notdir $(SOURCES:.cpp=))"
 
 .PHONY: all run clean debug profile help
+
+# 不删除任何中间文件（.o 保留，方便增量编译）
+.SECONDARY:
