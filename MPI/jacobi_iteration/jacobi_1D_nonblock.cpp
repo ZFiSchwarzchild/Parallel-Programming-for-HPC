@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <iostream>
+#include <cmath> //std::sqrt
+#include <iomanip> // std::setpercision
 #include <mpi.h>
 
 void ReadInput(std::string file, int rows, int cols, float* data){
@@ -115,7 +117,9 @@ int main(int argc, char* argv[]){
     MPI_Status status;
     MPI_Request request[4];
 
+    // int iter=0;
     while(error > errThreshold){
+        // iter++;
         if(myId > 0){
             // Send the first row to the previous process
             MPI_Isend(myData,cols,MPI_FLOAT,myId-1,0,MPI_COMM_WORLD,&request[0]);
@@ -179,12 +183,20 @@ int main(int argc, char* argv[]){
         // Calculate the error of the block
         myError = 0.0;
         for(int i = 0; i < myRows; i++){
-            for(int j = 0; j <cols-1; j++){
+            for(int j = 0; j <cols-1; j++){                
                 myError += (myData[i*cols+j]-buff[i*cols+j]) * (myData[i*cols+j]-buff[i*cols+j]);
             }
         }
         memcpy(myData,buff,myRows*cols*sizeof(float));
-
+        // myError = std::sqrt(myError/(myRows*cols));
+        // if(!myId){
+        //     std::cout << std::setprecision(12)  
+        //                 <<"iter = " << iter 
+        //                 << "     error = " << error 
+        //                 << "     myError = " << myError
+        //                 << std::endl;
+        // }
+        
         MPI_Allreduce(&myError,&error,1,MPI_FLOAT,MPI_SUM,MPI_COMM_WORLD);
     }
 
@@ -212,3 +224,21 @@ int main(int argc, char* argv[]){
     MPI_Finalize();
     return 0;
 }
+
+// Jacobi 低频收敛极慢 + 单精度误差指标饱和/极限环；阈值 1e-6 对 600x600 单精度太严。
+// 单精度：float 有效位 ~7 位，myError 量级 1e-6
+// 主要原因不是 MPI，而是 Jacobi 迭代的谱半径接近1
+// 定量：对 600x600，ρ≈cos(π/600)=0.9999863；每步误差约乘0.999986；要降到1e-6需约1e6步；235k步只降约e^-3.2≈0.04。低频模态主导，打印值几乎不变。
+// 到 235k 步时只剩低频/近棋盘模态，变化非常小，所以看起来收敛很慢。
+// 其次，标准 Jacobi 对最高频棋盘模态的 eigenvalue 约 -cos(π/600)≈-0.999986，也会以几乎同样的速度衰减并交替符号。
+// 初值 (i/121+j/121)%2 是方块棋盘，边界突变会激发这种模态。它在 float 下可能形成极限环或误差累积噪声，使 myError 到 1e-6 量级后不再下降。
+// 单精度限制：myData、buff、myError、error 都是 float，myError 是 4.5e4 项平方和，累加舍入误差与每步真实减小量同量级；到 1e-6 附近很容易被舍入噪声“钉住”。\
+措施：
+// 用归一化误差，例如 RMS (不管用)
+// double rms = std::sqrt(error / (rows * cols));
+// 者最大更新量：   （不管用）
+// double localMax = 0.0;
+// localMax = std::max(localMax, std::fabs(myData[k] - buff[k]));
+// MPI_Allreduce(&localMax, &maxDiff, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
+// 精度控制在 1e-4
